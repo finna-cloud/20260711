@@ -1,0 +1,8 @@
+#ark07-launcher{position:fixed;right:18px;bottom:82px;z-index:2999;border:1px solid #7ef2cf;background:#0c1719;color:#7ef2cf;padding:9px 13px;border-radius:4px;font-weight:800;letter-spacing:.12em;box-shadow:0 0 20px #7ef2cf33;cursor:pointer}
+#ark07-launcher:hover{background:#142528}
+#ark07-panel{position:fixed;right:0;top:0;width:min(980px,94vw);height:100dvh;z-index:3000;background:#070b0d;transform:translateX(102%);transition:transform .25s ease;box-shadow:-15px 0 45px #000b;display:flex;flex-direction:column}
+#ark07-panel.open{transform:translateX(0)}
+#ark07-panel-head{height:48px;flex:0 0 48px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid #26383a;background:#0d1517;color:#7ef2cf;letter-spacing:.1em}
+#ark07-close{border:0;background:transparent;color:#dbe6e3;font-size:30px;line-height:1;cursor:pointer}
+#ark07-frame{width:100%;height:calc(100dvh - 48px);border:0;background:#070b0d}
+@media(max-width:720px){#ark07-panel{width:100vw}#ark07-launcher{right:9px;bottom:74px}}
