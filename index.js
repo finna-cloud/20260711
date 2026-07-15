@@ -13,8 +13,10 @@ const DEFAULT_SETTINGS = Object.freeze({
 
 let coreModulePromise;
 let tokenizerModulePromise;
+let personaModulePromise;
 let activeView = 'home';
 let selectedCharacterId = null;
+let selectedPersonaId = null;
 let fullViewportHeight = 0;
 let viewportFrame = 0;
 
@@ -318,6 +320,34 @@ function getTokenizerModule() {
     return tokenizerModulePromise;
 }
 
+function getPersonaModule() {
+    personaModulePromise ??= import('/scripts/personas.js').catch(error => {
+        console.warn('[Midnight Signal] Unable to import persona module.', error);
+        return {};
+    });
+    return personaModulePromise;
+}
+
+async function getPersonaRuntime() {
+    const ctx = context();
+    const personaModule = await getPersonaModule();
+    const powerUser = ctx?.powerUserSettings || {};
+    powerUser.personas ??= {};
+    powerUser.persona_descriptions ??= {};
+
+    const selectedFromDom = document.querySelector('#user_avatar_block .avatar-container.selected')?.getAttribute('data-avatar-id');
+    const selectedByName = Object.keys(powerUser.personas).find(id => powerUser.personas[id] === ctx?.name1);
+    const currentId = personaModule.user_avatar || selectedPersonaId || selectedFromDom || selectedByName || Object.keys(powerUser.personas)[0] || '';
+    return { ctx, personaModule, powerUser, currentId };
+}
+
+function personaAvatarUrl(id) {
+    if (!id) return '';
+    const ctx = context();
+    if (typeof ctx?.getThumbnailUrl === 'function') return ctx.getThumbnailUrl('persona', id);
+    return `/thumbnail?type=persona&file=${encodeURIComponent(id)}`;
+}
+
 async function calculateCurrentChatTokens() {
     const ctx = context();
     const usage = getChatTokenUsage();
@@ -529,7 +559,7 @@ function settingsMarkup() {
                 <input type="checkbox" data-setting="compactMode" ${value.compactMode ? 'checked' : ''}>
             </label>
             <button class="msa-danger-button" type="button" data-action="reset-data">${icon('rotate-left')} 清除 APP 筆記資料</button>
-            <p class="msa-version">Midnight Signal APP · v1.3.1</p>
+            <p class="msa-version">Midnight Signal APP · v1.3.2</p>
         </section>`;
 }
 
@@ -561,6 +591,7 @@ function messagesMarkup() {
                 </article>`).join('') : '<div class="msa-chat-empty">還沒有訊息，從下方輸入第一句話吧。</div>'}</div>
             <div class="msa-chat-composer">
                 <textarea id="msa-chat-input" rows="2" maxlength="12000" placeholder="輸入訊息……（Enter 傳送，Shift+Enter 換行）" aria-label="聊天訊息"></textarea>
+                <button class="msa-persona-button" type="button" data-action="personas" aria-label="更換或編輯人設" title="更換或編輯人設">${icon('user-pen')}<span>人設</span></button>
                 <button type="button" data-action="send-message" aria-label="傳送訊息">${icon('paper-plane')}</button>
             </div>
             <small class="msa-chat-bridge-status">訊息將透過 SillyTavern 目前的角色、世界書與模型設定傳送</small>
@@ -773,6 +804,117 @@ function openNotifications() {
     showSheet('通知', `<div class="msa-notice-card">${icon('circle-check')}<span><strong>APP 已與 SillyTavern 連線</strong><small>角色、聊天與開場白資料會隨目前對話更新。</small></span></div>`);
 }
 
+async function openPersonaSheet() {
+    showSheet('更換與編輯人設', `<div class="msa-sheet-loading">${icon('spinner')}<span>正在讀取 SillyTavern 人設……</span></div>`);
+    try {
+        const { powerUser, currentId } = await getPersonaRuntime();
+        const personas = Object.entries(powerUser.personas)
+            .map(([id, name]) => ({ id, name: String(name || id), descriptor: powerUser.persona_descriptions[id] || {} }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+
+        if (!personas.length) {
+            showSheet('更換與編輯人設', `<div class="msa-sheet-empty">尚未建立任何人設。請先在 SillyTavern 的「人設管理」建立一組人設。</div>`);
+            return;
+        }
+
+        const current = personas.find(persona => persona.id === currentId) || personas[0];
+        const list = personas.map(persona => {
+            const avatar = personaAvatarUrl(persona.id);
+            const description = excerpt(persona.descriptor.description || '尚未填寫人設描述', 52);
+            return `
+                <button type="button" class="msa-persona-option ${persona.id === current.id ? 'is-current' : ''}" data-persona-id="${escapeHtml(persona.id)}">
+                    <span class="msa-persona-avatar" ${avatar ? `style="--msa-persona-avatar:url(&quot;${escapeHtml(avatar)}&quot;)"` : ''}>${icon('user')}</span>
+                    <span><strong>${escapeHtml(persona.name)}</strong><small>${escapeHtml(description)}</small></span>
+                    ${icon(persona.id === current.id ? 'circle-check' : 'chevron-right')}
+                </button>`;
+        }).join('');
+
+        const content = `
+            <div class="msa-persona-intro"><small>目前使用人設</small><strong>${escapeHtml(current.name)}</strong><span>點選上方人設即可切換；下方內容儲存後會立即套用於下一次對話。</span></div>
+            <div class="msa-persona-list">${list}</div>
+            <div id="msa-persona-editor" class="msa-persona-editor" data-persona-id="${escapeHtml(current.id)}">
+                <div class="msa-persona-editor-title">${icon('pen-to-square')}<span><small>EDIT PERSONA</small><strong>直接編輯人設</strong></span></div>
+                <label>人設名稱<input id="msa-persona-name" type="text" maxlength="120" value="${escapeHtml(current.name)}" placeholder="輸入人設名稱"></label>
+                <label>人設描述<textarea id="msa-persona-description" rows="9" maxlength="30000" placeholder="輸入身分、外表、性格、說話方式等人設內容……">${escapeHtml(current.descriptor.description || '')}</textarea></label>
+                <button class="msa-save-button" type="button" data-action="save-persona">${icon('floppy-disk')} 儲存並立即套用</button>
+            </div>`;
+        showSheet('更換與編輯人設', content);
+    } catch (error) {
+        showSheet('更換與編輯人設', `<div class="msa-sheet-empty">無法讀取 SillyTavern 人設資料，請重新整理頁面後再試。</div>`);
+        console.error('[Midnight Signal] Failed to open persona editor.', error);
+    }
+}
+
+async function selectPersonaFromApp(id) {
+    const { ctx, personaModule, powerUser } = await getPersonaRuntime();
+    if (!id || !Object.hasOwn(powerUser.personas, id)) {
+        notify('找不到這組人設。', 'error');
+        return;
+    }
+
+    if (typeof personaModule.setUserAvatar === 'function') {
+        await personaModule.setUserAvatar(id, { navigateToCurrent: false });
+    } else {
+        const nativePersona = [...document.querySelectorAll('#user_avatar_block .avatar-container')]
+            .find(node => node.getAttribute('data-avatar-id') === id);
+        if (nativePersona) nativePersona.click();
+        const descriptor = powerUser.persona_descriptions[id] || {};
+        powerUser.persona_description = descriptor.description || '';
+        const core = await getCoreModule();
+        core.setUserName?.(powerUser.personas[id]);
+        ctx?.saveSettingsDebounced?.();
+    }
+
+    selectedPersonaId = id;
+    await openPersonaSheet();
+    notify(`已切換為人設「${powerUser.personas[id]}」。`, 'success');
+}
+
+async function savePersonaFromApp() {
+    const editor = document.getElementById('msa-persona-editor');
+    const nameInput = document.getElementById('msa-persona-name');
+    const descriptionInput = document.getElementById('msa-persona-description');
+    const id = editor?.dataset.personaId;
+    const newName = nameInput?.value.trim();
+    const newDescription = descriptionInput?.value.trim() || '';
+    if (!id || !newName) {
+        notify('請輸入人設名稱。', 'warning');
+        nameInput?.focus();
+        return;
+    }
+
+    const { ctx, personaModule, powerUser, currentId } = await getPersonaRuntime();
+    if (!Object.hasOwn(powerUser.personas, id)) {
+        notify('找不到要編輯的人設。', 'error');
+        return;
+    }
+
+    const oldName = powerUser.personas[id];
+    const descriptor = powerUser.persona_descriptions[id] ??= {
+        description: '', position: 0, depth: 2, role: 0, lorebook: '', connections: [], title: '',
+    };
+    powerUser.personas[id] = newName;
+    descriptor.description = newDescription;
+
+    const eventTypes = ctx?.eventTypes || ctx?.event_types || {};
+    if (id === currentId || id === selectedPersonaId) {
+        powerUser.persona_description = newDescription;
+        const core = await getCoreModule();
+        core.setUserName?.(newName);
+        personaModule.setPersonaDescription?.();
+    }
+
+    ctx?.saveSettingsDebounced?.();
+    if (oldName !== newName && eventTypes.PERSONA_RENAMED) {
+        await ctx?.eventSource?.emit?.(eventTypes.PERSONA_RENAMED, { avatarId: id, oldName, newName });
+    }
+    if (eventTypes.PERSONA_UPDATED) await ctx?.eventSource?.emit?.(eventTypes.PERSONA_UPDATED, id);
+
+    selectedPersonaId = id;
+    await openPersonaSheet();
+    notify(`人設「${newName}」已儲存並套用。`, 'success');
+}
+
 function toggleFavorite(id) {
     const character = context()?.characters?.[id];
     if (!character) return;
@@ -918,6 +1060,18 @@ async function handleClick(event) {
         }
         return;
     }
+    if (button.dataset.personaId !== undefined) {
+        button.disabled = true;
+        try {
+            await selectPersonaFromApp(button.dataset.personaId);
+        } catch (error) {
+            notify('人設切換失敗，請重新整理頁面後再試。', 'error');
+            console.error('[Midnight Signal] Failed to switch persona.', error);
+        } finally {
+            button.disabled = false;
+        }
+        return;
+    }
     if (button.dataset.deleteMemory !== undefined) {
         deleteMemory(button.dataset.deleteMemory);
         return;
@@ -929,6 +1083,7 @@ async function handleClick(event) {
         characters: openCharacterSheet,
         greetings: openGreetingSheet,
         notifications: openNotifications,
+        personas: openPersonaSheet,
         tokens: () => {
             render('tokens');
             calculateCurrentChatTokens();
@@ -940,6 +1095,7 @@ async function handleClick(event) {
         'save-relationship': saveRelationship,
         'add-memory': addMemory,
         'send-message': sendMessageFromApp,
+        'save-persona': savePersonaFromApp,
         'reset-chat-tokens': async () => {
             const ctx = context();
             if (!ctx?.chatMetadata) return;
