@@ -180,6 +180,10 @@ body.msa-open { overflow: hidden; }
 .msa-setting-row strong { font-size: 14px; }
 .msa-setting-row small { color: var(--msa-muted); font-size: 10px; }
 .msa-setting-row input { width: 19px; height: 19px; accent-color: var(--msa-rose); }
+.msa-font-setting { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.msa-font-setting output { min-width: 48px; padding: 5px 8px; border: 1px solid rgba(236,116,124,.3); border-radius: 9px; color: var(--msa-rose-soft); background: rgba(110,34,47,.18); font-size: 11px; text-align: center; }
+.msa-font-setting input[type="range"] { grid-column: 1 / -1; width: 100%; height: 24px; margin: 2px 0 0; cursor: pointer; accent-color: var(--msa-rose); }
+.msa-font-preview { grid-column: 1 / -1; display: block !important; padding: 11px 13px; border: 1px solid rgba(255,255,255,.08); border-radius: 13px; color: #ded2cf; background: #101724; font-size: var(--msa-chat-font-size, 12px); line-height: 1.65; }
 .msa-danger-button, .msa-save-button { width: 100%; margin-top: 13px; padding: 14px; border-radius: 14px; cursor: pointer; }
 .msa-danger-button { border: 1px solid rgba(238,116,124,.35); color: #e59a9e; background: rgba(105,26,38,.16); }
 .msa-save-button { border: 1px solid var(--msa-rose); color: #fff; background: #7a2936; }
@@ -199,7 +203,7 @@ body.msa-open { overflow: hidden; }
 .msa-message { max-width: 90%; padding: 12px 14px; border-radius: 16px; background: #101724; }
 .msa-message.is-user { justify-self: end; border: 1px solid rgba(235,109,118,.35); background: rgba(102,35,46,.48); }
 .msa-message small { color: var(--msa-rose); font-size: 10px; }
-.msa-message p { margin: 5px 0 0; color: #ded2cf; font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; word-break: break-word; }
+.msa-message p { margin: 5px 0 0; color: #ded2cf; font-size: var(--msa-chat-font-size, 12px); line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; word-break: break-word; }
 .msa-chat-composer { display: grid; grid-template-columns: minmax(0, 1fr) 48px 48px; flex: 0 0 auto; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.09); }
 .msa-chat-composer textarea { width: 100%; min-height: 48px; max-height: 130px; resize: vertical; padding: 11px 13px; border: 1px solid rgba(255,255,255,.14); border-radius: 15px; color: var(--msa-ivory); background: #090f19; outline: none; font: 12px/1.55 inherit; }
 .msa-chat-composer textarea:focus { border-color: var(--msa-rose); box-shadow: 0 0 0 3px rgba(236,116,124,.1); }

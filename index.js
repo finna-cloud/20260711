@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = Object.freeze({
     relationshipNotes: {},
     memories: {},
     compactMode: false,
+    chatFontSize: 12,
 });
 
 let coreModulePromise;
@@ -40,6 +41,17 @@ function settings() {
 
 function saveSettings() {
     context()?.saveSettingsDebounced?.();
+}
+
+function getChatFontSize() {
+    const value = Number(settings().chatFontSize);
+    return Math.min(22, Math.max(10, Number.isFinite(value) ? value : 12));
+}
+
+function applyVisualSettings(root = document.getElementById(ROOT_ID)) {
+    if (!root) return;
+    root.classList.toggle('msa-compact', settings().compactMode);
+    root.style.setProperty('--msa-chat-font-size', `${getChatFontSize()}px`);
 }
 
 function notify(message, type = 'info') {
@@ -547,6 +559,7 @@ function favoritesMarkup() {
 
 function settingsMarkup() {
     const value = settings();
+    const chatFontSize = getChatFontSize();
     return `
         <section class="msa-page">
             <div class="msa-page-title"><span><small>SETTINGS</small><strong>介面設定</strong></span></div>
@@ -558,8 +571,14 @@ function settingsMarkup() {
                 <span><strong>緊湊模式</strong><small>縮小按鈕與區塊間距</small></span>
                 <input type="checkbox" data-setting="compactMode" ${value.compactMode ? 'checked' : ''}>
             </label>
+            <label class="msa-setting-row msa-font-setting">
+                <span><strong>聊天室訊息字體</strong><small>調整訊息泡泡內的文字大小</small></span>
+                <output id="msa-chat-font-value" for="msa-chat-font-size">${chatFontSize} px</output>
+                <input id="msa-chat-font-size" type="range" min="10" max="22" step="1" value="${chatFontSize}" data-setting="chatFontSize" aria-label="聊天室訊息字體大小">
+                <span class="msa-font-preview">這是一段聊天室訊息大小預覽。</span>
+            </label>
             <button class="msa-danger-button" type="button" data-action="reset-data">${icon('rotate-left')} 清除 APP 筆記資料</button>
-            <p class="msa-version">Midnight Signal APP · v1.3.2</p>
+            <p class="msa-version">Midnight Signal APP · v1.3.3</p>
         </section>`;
 }
 
@@ -675,7 +694,7 @@ function render(view = activeView) {
     const root = document.getElementById(ROOT_ID);
     const content = document.getElementById('msa-content');
     if (!root || !content) return;
-    root.classList.toggle('msa-compact', settings().compactMode);
+    applyVisualSettings(root);
     root.classList.toggle('msa-view-messages', view === 'messages');
 
     const markup = {
@@ -1126,9 +1145,24 @@ async function handleClick(event) {
 function handleChange(event) {
     const input = event.target.closest('[data-setting]');
     if (!input) return;
+    if (input.dataset.setting === 'chatFontSize') {
+        handleInput(event);
+        return;
+    }
     settings()[input.dataset.setting] = input.type === 'checkbox' ? input.checked : input.value;
     saveSettings();
     render('settings');
+}
+
+function handleInput(event) {
+    const input = event.target.closest('[data-setting="chatFontSize"]');
+    if (!input) return;
+    const value = Math.min(22, Math.max(10, Number(input.value) || 12));
+    settings().chatFontSize = value;
+    applyVisualSettings();
+    const output = document.getElementById('msa-chat-font-value');
+    if (output) output.textContent = `${value} px`;
+    saveSettings();
 }
 
 function mount() {
@@ -1139,6 +1173,7 @@ function mount() {
     document.getElementById('msa-launcher').addEventListener('click', () => showApp('home'));
     document.getElementById(ROOT_ID).addEventListener('click', handleClick);
     document.getElementById(ROOT_ID).addEventListener('change', handleChange);
+    document.getElementById(ROOT_ID).addEventListener('input', handleInput);
     document.getElementById(ROOT_ID).addEventListener('focusin', event => {
         scheduleViewportSync();
         if (event.target.id === 'msa-chat-input') {
