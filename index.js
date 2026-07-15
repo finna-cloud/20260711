@@ -492,6 +492,7 @@ function shellMarkup() {
                 <nav class="msa-bottom-nav" aria-label="APP 導覽">
                     <button type="button" data-nav="home">${icon('house')}<span>主頁</span></button>
                     <button type="button" data-nav="favorites">${icon('star')}<span>收藏</span></button>
+                    <button type="button" data-nav="cards">${icon('address-card')}<span>角色</span></button>
                     <button type="button" data-nav="settings">${icon('gear')}<span>設定</span></button>
                 </nav>
             </section>
@@ -557,6 +558,27 @@ function favoritesMarkup() {
         </section>`;
 }
 
+function characterManagementMarkup() {
+    const characters = getCharacters();
+    return `
+        <section class="msa-page msa-card-manager-page">
+            <div class="msa-page-title"><span><small>CHARACTER CARDS</small><strong>角色卡管理</strong></span></div>
+            <div class="msa-card-actions">
+                <button type="button" data-action="import-character">${icon('file-import')}<span><strong>匯入角色卡</strong><small>PNG、JSON、YAML、CHARX、BYAF</small></span></button>
+                <button type="button" data-action="new-character">${icon('user-plus')}<span><strong>新增角色卡</strong><small>直接建立基本角色資料</small></span></button>
+            </div>
+            <p class="msa-card-manager-note">刪除角色卡時會保留原有聊天紀錄；角色卡本身刪除後無法復原。</p>
+            <div class="msa-managed-card-list">${characters.length ? characters.map(({ character, id }) => `
+                <article class="msa-managed-card ${Number(context()?.characterId) === id ? 'is-current' : ''}">
+                    <button type="button" class="msa-managed-card-main" data-character-id="${id}">
+                        <span class="msa-avatar" style="--msa-avatar-url:url('${escapeHtml(avatarUrl(character))}')"></span>
+                        <span><strong>${escapeHtml(characterName(character))}</strong><small>${escapeHtml(excerpt(character.description || character.data?.description || '尚未填寫角色描述', 58))}</small></span>
+                    </button>
+                    <button type="button" class="msa-managed-card-delete" data-delete-character="${id}" aria-label="刪除 ${escapeHtml(characterName(character))}">${icon('trash-can')}</button>
+                </article>`).join('') : '<div class="msa-card-manager-empty">目前沒有角色卡，可從上方匯入或新增。</div>'}</div>
+        </section>`;
+}
+
 function settingsMarkup() {
     const value = settings();
     const chatFontSize = getChatFontSize();
@@ -578,7 +600,7 @@ function settingsMarkup() {
                 <span class="msa-font-preview">這是一段聊天室訊息大小預覽。</span>
             </label>
             <button class="msa-danger-button" type="button" data-action="reset-data">${icon('rotate-left')} 清除 APP 筆記資料</button>
-            <p class="msa-version">Midnight Signal APP · v1.3.3</p>
+            <p class="msa-version">Midnight Signal APP · v1.3.4</p>
         </section>`;
 }
 
@@ -700,6 +722,7 @@ function render(view = activeView) {
     const markup = {
         home: homeMarkup,
         favorites: favoritesMarkup,
+        cards: characterManagementMarkup,
         settings: settingsMarkup,
         messages: messagesMarkup,
         relationship: relationshipMarkup,
@@ -934,6 +957,130 @@ async function savePersonaFromApp() {
     notify(`人設「${newName}」已儲存並套用。`, 'success');
 }
 
+async function getAppRequestHeaders(options = {}) {
+    const ctx = context();
+    if (typeof ctx?.getRequestHeaders === 'function') return ctx.getRequestHeaders(options);
+    const core = await getCoreModule();
+    return typeof core.getRequestHeaders === 'function' ? core.getRequestHeaders(options) : {};
+}
+
+async function refreshCharacterData() {
+    const ctx = context();
+    let refresh = ctx?.getCharacters;
+    if (typeof refresh !== 'function') {
+        const core = await getCoreModule();
+        refresh = core.getCharacters;
+    }
+    if (typeof refresh === 'function') await refresh.call(ctx);
+}
+
+function triggerCharacterImport() {
+    const input = document.getElementById('character_import_file');
+    if (!input) {
+        notify('找不到 SillyTavern 原生角色卡匯入器，請重新整理頁面後再試。', 'error');
+        return;
+    }
+    input.click();
+}
+
+function openCreateCharacterSheet() {
+    const content = `
+        <div id="msa-new-character-form" class="msa-new-character-form">
+            <div class="msa-create-card-intro">${icon('user-plus')}<span><strong>建立新角色卡</strong><small>儲存後會立即加入 SillyTavern 角色清單。</small></span></div>
+            <label>角色名稱 <b>*</b><input id="msa-new-character-name" type="text" maxlength="120" placeholder="例如：ARK-07"></label>
+            <label>角色頭像 <small>選填，支援 PNG、JPG、GIF</small><input id="msa-new-character-avatar" type="file" accept="image/png,image/jpeg,image/gif"></label>
+            <label>角色描述<textarea id="msa-new-character-description" rows="6" maxlength="30000" placeholder="外表、身分、背景與重要設定……"></textarea></label>
+            <label>性格<textarea id="msa-new-character-personality" rows="4" maxlength="12000" placeholder="性格特徵、情緒反應與說話方式……"></textarea></label>
+            <label>場景<textarea id="msa-new-character-scenario" rows="3" maxlength="12000" placeholder="角色與玩家所在的世界、時間與初始情境……"></textarea></label>
+            <label>開場白<textarea id="msa-new-character-first-message" rows="6" maxlength="30000" placeholder="角色在新聊天中說出的第一段話……"></textarea></label>
+            <button class="msa-save-button" type="button" data-action="create-character">${icon('floppy-disk')} 建立角色卡</button>
+        </div>`;
+    showSheet('新增角色卡', content);
+    setTimeout(() => document.getElementById('msa-new-character-name')?.focus(), 80);
+}
+
+async function createCharacterFromApp() {
+    const nameInput = document.getElementById('msa-new-character-name');
+    const name = nameInput?.value.trim();
+    if (!name) {
+        notify('請輸入角色名稱。', 'warning');
+        nameInput?.focus();
+        return;
+    }
+
+    const button = document.querySelector('[data-action="create-character"]');
+    if (button) button.disabled = true;
+    const formData = new FormData();
+    const fields = {
+        ch_name: name,
+        description: document.getElementById('msa-new-character-description')?.value.trim() || '',
+        personality: document.getElementById('msa-new-character-personality')?.value.trim() || '',
+        scenario: document.getElementById('msa-new-character-scenario')?.value.trim() || '',
+        first_mes: document.getElementById('msa-new-character-first-message')?.value.trim() || '',
+        mes_example: '', creator_notes: '', system_prompt: '', post_history_instructions: '',
+        talkativeness: '0.5', fav: 'false', tags: '', creator: '', character_version: '',
+        depth_prompt_prompt: '', depth_prompt_depth: '4', depth_prompt_role: 'system', extensions: '{}',
+    };
+    for (const [key, value] of Object.entries(fields)) formData.append(key, value);
+    const avatar = document.getElementById('msa-new-character-avatar')?.files?.[0];
+    if (avatar) formData.append('avatar', avatar);
+
+    try {
+        const response = await fetch('/api/characters/create', {
+            method: 'POST',
+            headers: await getAppRequestHeaders({ omitContentType: true }),
+            body: formData,
+            cache: 'no-cache',
+        });
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        await response.text();
+        await refreshCharacterData();
+        closeSheet();
+        render('cards');
+        notify(`角色卡「${name}」已建立。`, 'success');
+    } catch (error) {
+        notify('角色卡建立失敗，請確認名稱與圖片格式後再試。', 'error');
+        console.error('[Midnight Signal] Failed to create character.', error);
+        if (button) button.disabled = false;
+    }
+}
+
+async function deleteCharacterFromApp(id) {
+    const ctx = context();
+    const character = ctx?.characters?.[Number(id)];
+    if (!character) {
+        notify('找不到要刪除的角色卡。', 'error');
+        return;
+    }
+
+    const name = characterName(character);
+    if (!confirm(`確定刪除角色卡「${name}」嗎？\n\n既有聊天紀錄會保留，但角色卡刪除後無法復原。`)) return;
+
+    try {
+        const core = await getCoreModule();
+        let deleted = false;
+        if (typeof core.deleteCharacter === 'function') {
+            deleted = await core.deleteCharacter(characterKey(character), { deleteChats: false });
+        } else {
+            const response = await fetch('/api/characters/delete', {
+                method: 'POST',
+                headers: await getAppRequestHeaders(),
+                body: JSON.stringify({ avatar_url: characterKey(character), delete_chats: false }),
+                cache: 'no-cache',
+            });
+            if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+            deleted = true;
+        }
+        if (!deleted) return;
+        await refreshCharacterData();
+        render('cards');
+        notify(`角色卡「${name}」已刪除，聊天紀錄已保留。`, 'success');
+    } catch (error) {
+        notify('角色卡刪除失敗，請稍後再試。', 'error');
+        console.error('[Midnight Signal] Failed to delete character.', error);
+    }
+}
+
 function toggleFavorite(id) {
     const character = context()?.characters?.[id];
     if (!character) return;
@@ -1091,6 +1238,15 @@ async function handleClick(event) {
         }
         return;
     }
+    if (button.dataset.deleteCharacter !== undefined) {
+        button.disabled = true;
+        try {
+            await deleteCharacterFromApp(button.dataset.deleteCharacter);
+        } finally {
+            if (button.isConnected) button.disabled = false;
+        }
+        return;
+    }
     if (button.dataset.deleteMemory !== undefined) {
         deleteMemory(button.dataset.deleteMemory);
         return;
@@ -1103,6 +1259,8 @@ async function handleClick(event) {
         greetings: openGreetingSheet,
         notifications: openNotifications,
         personas: openPersonaSheet,
+        'import-character': triggerCharacterImport,
+        'new-character': openCreateCharacterSheet,
         tokens: () => {
             render('tokens');
             calculateCurrentChatTokens();
@@ -1115,6 +1273,7 @@ async function handleClick(event) {
         'add-memory': addMemory,
         'send-message': sendMessageFromApp,
         'save-persona': savePersonaFromApp,
+        'create-character': createCharacterFromApp,
         'reset-chat-tokens': async () => {
             const ctx = context();
             if (!ctx?.chatMetadata) return;
@@ -1205,6 +1364,23 @@ function mount() {
         document.getElementById('msa-extension-menu-button').addEventListener('click', () => showApp('home'));
     }
 
+    const characterImportInput = document.getElementById('character_import_file');
+    if (characterImportInput && !characterImportInput.dataset.msaRefreshBound) {
+        characterImportInput.dataset.msaRefreshBound = 'true';
+        characterImportInput.addEventListener('change', async () => {
+            for (let attempt = 0; attempt < 40; attempt++) {
+                await sleep(250);
+                if (!characterImportInput.value) break;
+            }
+            try {
+                await refreshCharacterData();
+                if (activeView === 'cards' && !document.getElementById(ROOT_ID)?.classList.contains('msa-hidden')) render('cards');
+            } catch (error) {
+                console.warn('[Midnight Signal] Unable to refresh characters after import.', error);
+            }
+        });
+    }
+
     const ctx = context();
     installTokenTracker();
     const refresh = () => {
@@ -1213,7 +1389,7 @@ function mount() {
         if (!document.getElementById(ROOT_ID)?.classList.contains('msa-hidden')) render(activeView);
         if (activeView === 'tokens') calculateCurrentChatTokens();
     };
-    ['CHAT_CHANGED', 'CHARACTER_EDITED', 'MESSAGE_SENT', 'MESSAGE_RECEIVED', 'MESSAGE_SWIPED'].forEach(name => {
+    ['CHAT_CHANGED', 'CHARACTER_EDITED', 'CHARACTER_DELETED', 'CHARACTER_CREATED', 'MESSAGE_SENT', 'MESSAGE_RECEIVED', 'MESSAGE_SWIPED'].forEach(name => {
         const eventName = ctx?.event_types?.[name];
         if (eventName) ctx.eventSource?.on?.(eventName, refresh);
     });

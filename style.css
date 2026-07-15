@@ -152,7 +152,7 @@ body.msa-open { overflow: hidden; }
 .msa-grid button i { color: #d87078; font-size: 29px; }
 .msa-grid button:hover { border-color: rgba(236,116,124,.62); background: #121925; transform: translateY(-1px); }
 
-.msa-bottom-nav { display: grid; grid-template-columns: repeat(3, 1fr); flex: 0 0 69px; border-top: 1px solid rgba(255,255,255,.1); background: rgba(7,11,18,.96); }
+.msa-bottom-nav { display: grid; grid-template-columns: repeat(4, 1fr); flex: 0 0 69px; border-top: 1px solid rgba(255,255,255,.1); background: rgba(7,11,18,.96); }
 .msa-bottom-nav button { display: grid; position: relative; place-items: center; align-content: center; gap: 5px; border: 0; color: #8f898a; background: none; font-size: 10px; cursor: pointer; }
 .msa-bottom-nav button i { font-size: 21px; }
 .msa-bottom-nav button.is-active { color: var(--msa-rose); }
@@ -174,6 +174,26 @@ body.msa-open { overflow: hidden; }
 .msa-character-main small { color: var(--msa-muted); font-size: 11px; }
 .msa-favorite-toggle { width: 36px; height: 36px; border: 0; color: #6f6870; background: none; cursor: pointer; }
 .msa-favorite-toggle.is-favorite { color: #efb25f; }
+
+.msa-card-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.msa-card-actions button { display: grid; min-height: 92px; place-items: center; align-content: center; gap: 9px; padding: 12px; border: 1px solid rgba(236,116,124,.3); border-radius: 17px; color: var(--msa-ivory); background: linear-gradient(145deg, rgba(104,31,44,.35), #0c1420); cursor: pointer; }
+.msa-card-actions button > i { color: var(--msa-rose); font-size: 24px; }
+.msa-card-actions button > span { display: grid; gap: 3px; text-align: center; }
+.msa-card-actions strong { font-size: 13px; }
+.msa-card-actions small { color: var(--msa-muted); font-size: 8px; line-height: 1.35; }
+.msa-card-manager-note { margin: 11px 3px 13px; color: #776d70; font-size: 9px; line-height: 1.55; }
+.msa-managed-card-list { display: grid; gap: 9px; }
+.msa-managed-card { display: grid; grid-template-columns: minmax(0, 1fr) 46px; align-items: stretch; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; background: #0c131e; }
+.msa-managed-card.is-current { border-color: rgba(99,220,206,.55); box-shadow: inset 3px 0 #5bd7c8; }
+.msa-managed-card-main { display: flex; align-items: center; min-width: 0; gap: 12px; padding: 11px 13px; border: 0; color: inherit; background: none; text-align: left; cursor: pointer; }
+.msa-managed-card-main .msa-avatar { width: 46px; height: 46px; }
+.msa-managed-card-main > span:last-child { display: grid; min-width: 0; gap: 4px; }
+.msa-managed-card-main strong, .msa-managed-card-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msa-managed-card-main strong { font-size: 13px; }
+.msa-managed-card-main small { color: var(--msa-muted); font-size: 9px; }
+.msa-managed-card-delete { border: 0; border-left: 1px solid rgba(255,255,255,.07); color: #b96870; background: rgba(91,27,39,.12); cursor: pointer; }
+.msa-managed-card-delete:hover { color: #ffd5d5; background: rgba(132,36,50,.35); }
+.msa-card-manager-empty { padding: 45px 12px; color: var(--msa-muted); font-size: 11px; text-align: center; }
 
 .msa-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 12px; padding: 16px; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; background: var(--msa-panel); }
 .msa-setting-row > span { display: grid; gap: 4px; }
@@ -313,6 +333,21 @@ body.msa-open { overflow: hidden; }
 .msa-persona-editor input { min-height: 44px; padding: 0 12px; }
 .msa-persona-editor textarea { min-height: 150px; padding: 12px; resize: vertical; }
 .msa-persona-editor input:focus, .msa-persona-editor textarea:focus { border-color: #60d6c8; box-shadow: 0 0 0 3px rgba(96,214,200,.1); }
+.msa-new-character-form { display: grid; gap: 13px; }
+.msa-create-card-intro { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid rgba(236,116,124,.28); border-radius: 15px; background: rgba(106,32,45,.2); }
+.msa-create-card-intro > i { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 12px; color: #ffb1b5; background: rgba(128,39,54,.32); font-size: 18px; }
+.msa-create-card-intro > span { display: grid; gap: 4px; }
+.msa-create-card-intro strong { font-size: 14px; }
+.msa-create-card-intro small { color: var(--msa-muted); font-size: 9px; }
+.msa-new-character-form label { display: grid; gap: 7px; color: #c7b8b6; font-size: 11px; }
+.msa-new-character-form label b { color: var(--msa-rose); }
+.msa-new-character-form label > small { color: #7e7476; font-size: 9px; }
+.msa-new-character-form input, .msa-new-character-form textarea { width: 100%; border: 1px solid rgba(255,255,255,.13); border-radius: 13px; color: var(--msa-ivory); background: #090f19; outline: none; font: 12px/1.65 inherit; }
+.msa-new-character-form input[type="text"] { min-height: 44px; padding: 0 12px; }
+.msa-new-character-form input[type="file"] { min-height: 44px; padding: 8px; color: var(--msa-muted); font-size: 10px; }
+.msa-new-character-form input[type="file"]::file-selector-button { margin-right: 9px; padding: 7px 10px; border: 1px solid rgba(236,116,124,.35); border-radius: 9px; color: #efc4c2; background: rgba(109,34,47,.36); }
+.msa-new-character-form textarea { min-height: 82px; padding: 11px 12px; resize: vertical; }
+.msa-new-character-form input:focus, .msa-new-character-form textarea:focus { border-color: var(--msa-rose); box-shadow: 0 0 0 3px rgba(236,116,124,.1); }
 .msa-notice-card { display: flex; align-items: center; gap: 13px; padding: 16px; border: 1px solid rgba(75,226,203,.23); border-radius: 16px; background: rgba(25,90,83,.15); }
 .msa-notice-card > i { color: #4be2cb; font-size: 24px; }
 .msa-notice-card > span { display: grid; gap: 4px; }
@@ -333,6 +368,7 @@ body.msa-open { overflow: hidden; }
     .msa-sheet > section { width: 100%; max-height: 88%; padding-bottom: env(safe-area-inset-bottom); border-right: 0; border-bottom: 0; border-left: 0; }
     .msa-chat-composer textarea, .msa-textarea-label textarea, .msa-add-row input { font-size: 16px; }
     .msa-persona-editor input, .msa-persona-editor textarea { font-size: 16px; }
+    .msa-new-character-form input, .msa-new-character-form textarea { font-size: 16px; }
     #msa-root.msa-keyboard-open .msa-bottom-nav { display: none; }
 }
 
